@@ -21,3 +21,16 @@ $ tmpl -data '["foo","bar","baz"]' a.go.tmpl b.go.tmpl
 ```
 
 You will now have templates generated at `a.go` and `b.go`.
+
+
+### Template data files
+
+Once your data set gets larger, it may be useful to move it to its own file
+instead of specifying it on the command line. To use a data file instead
+of raw JSON on the command line, use the `-data` argument but prefix your
+path with an `@` symbol.
+
+```sh
+$ echo '["foo","bar","baz"]' > tmpldata
+$ tmpl -data=@tmpldata my.tmpl
+```
