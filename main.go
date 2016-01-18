@@ -38,6 +38,15 @@ type Main struct {
 	// Data to be applied to the files during generation.
 	Data interface{}
 
+	OS interface {
+		Stat(filename string) (os.FileInfo, error)
+	}
+
+	FileReadWriter interface {
+		ReadFile(filename string) ([]byte, error)
+		WriteFile(filename string, data []byte, perm os.FileMode) error
+	}
+
 	// Standard input/output
 	Stdin  io.Reader
 	Stdout io.Writer
@@ -47,6 +56,9 @@ type Main struct {
 // NewMain returns a new instance of Main.
 func NewMain() *Main {
 	return &Main{
+		OS:             &mainOS{},
+		FileReadWriter: &fileReadWriter{},
+
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
@@ -64,7 +76,17 @@ func (m *Main) ParseFlags(args []string) error {
 
 	// Parse JSON data.
 	if *data != "" {
-		if err := json.Unmarshal([]byte(*data), &m.Data); err != nil {
+		// If the data has a @-prefix then read from a file.
+		buf := []byte(*data)
+		if strings.HasPrefix(*data, "@") {
+			b, err := m.FileReadWriter.ReadFile(strings.TrimPrefix(*data, "@"))
+			if err != nil {
+				return err
+			}
+			buf = b
+		}
+
+		if err := json.Unmarshal(buf, &m.Data); err != nil {
 			return err
 		}
 	}
@@ -101,7 +123,7 @@ func (m *Main) process(path string) error {
 	outputPath := strings.TrimSuffix(path, Extension)
 
 	// Stat the file to retrieve the mode.
-	fi, err := os.Stat(path)
+	fi, err := m.OS.Stat(path)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("file not found")
 	} else if err != nil {
@@ -109,8 +131,10 @@ func (m *Main) process(path string) error {
 	}
 
 	// Read in template file.
-	source, err := ioutil.ReadFile(path)
-	if err != nil {
+	source, err := m.FileReadWriter.ReadFile(path)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("file not found")
+	} else if err != nil {
 		return err
 	}
 
@@ -146,7 +170,7 @@ func (m *Main) process(path string) error {
 	}
 
 	// Write buffer to file.
-	if err := ioutil.WriteFile(outputPath, output, fi.Mode()); err != nil {
+	if err := m.FileReadWriter.WriteFile(outputPath, output, fi.Mode()); err != nil {
 		return err
 	}
 
@@ -165,3 +189,18 @@ func camelCase(s string) string {
 	}
 	return strings.ToLower(string(s[0])) + s[1:]
 }
+
+// fileReadWriter implements Main.FileReadWriter.
+type fileReadWriter struct{}
+
+func (*fileReadWriter) ReadFile(filename string) ([]byte, error) {
+	return ioutil.ReadFile(filename)
+}
+func (*fileReadWriter) WriteFile(filename string, data []byte, perm os.FileMode) error {
+	return ioutil.WriteFile(filename, data, perm)
+}
+
+// mainOS implements Main.OS.
+type mainOS struct{}
+
+func (*mainOS) Stat(name string) (os.FileInfo, error) { return os.Stat(name) }
