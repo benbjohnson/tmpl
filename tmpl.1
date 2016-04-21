@@ -1,0 +1,19 @@
+.\" Manpage for tmpl.
+.\" Contact aviau@debian.org to correct errors or typos.
+.TH man 8 "21 April 2016" "1.0" "tmpl man page"
+.SH NAME
+tmpl \- Command line interface to Go's text/template library
+.SH SYNOPSIS
+tmpl [options]
+.SH DESCRIPTION
+This program is a command line interface to Go's text/template library. It can be used by passing in a set of JSON-encoded data and a list of template paths ending in a .tmpl extension. The templates are processed and their results are saved to the filename with the .tmpl extension removed.
+
+Once your data set gets larger, it may be useful to move it to its own file instead of specifying it on the command line. To use a data file instead of raw JSON on the command line, use the -data argument but prefix your path with an @ symbol.
+.SH OPTIONS
+.B \-data <string>
+JSON data.
+.TP
+.B \-help
+Display usage information and exit.
+.SH AUTHOR
+Alexandre Viau (aviau@debian.org)
