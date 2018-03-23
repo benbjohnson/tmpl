@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/dustin/go-humanize/english"
 )
 
 // Extension is the required file extension for processed files.
@@ -34,6 +36,8 @@ func main() {
 type Main struct {
 	// Files to be processed.
 	Paths []string
+
+	OutputPath string
 
 	// Data to be applied to the files during generation.
 	Data interface{}
@@ -70,6 +74,7 @@ func (m *Main) ParseFlags(args []string) error {
 	fs := flag.NewFlagSet("tmp", flag.ContinueOnError)
 	fs.SetOutput(m.Stderr)
 	data := fs.String("data", "", "json data")
+	fs.StringVar(&m.OutputPath, "o", "", "output file")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -120,7 +125,10 @@ func (m *Main) process(path string) error {
 	if !strings.HasSuffix(path, Extension) {
 		return fmt.Errorf("path must have %s extension: %s", Extension, path)
 	}
-	outputPath := strings.TrimSuffix(path, Extension)
+	outputPath := m.OutputPath
+	if outputPath == "" {
+		outputPath = strings.TrimSuffix(path, Extension)
+	}
 
 	// Stat the file to retrieve the mode.
 	fi, err := m.OS.Stat(path)
@@ -181,9 +189,10 @@ func (m *Main) process(path string) error {
 }
 
 var FuncMap = template.FuncMap{
-	"upcase":   strings.ToUpper,
-	"downcase": strings.ToLower,
-	"camel":    camelCase,
+	"upcase":    strings.ToUpper,
+	"downcase":  strings.ToLower,
+	"camel":     camelCase,
+	"pluralize": pluralize,
 }
 
 func camelCase(s string) string {
@@ -191,6 +200,10 @@ func camelCase(s string) string {
 		return s
 	}
 	return strings.ToLower(string(s[0])) + s[1:]
+}
+
+func pluralize(s string) string {
+	return english.PluralWord(2, s, "")
 }
 
 // fileReadWriter implements Main.FileReadWriter.
