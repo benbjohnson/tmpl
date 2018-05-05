@@ -170,11 +170,13 @@ func (m *Main) process(path string) error {
 	}
 
 	// Format output if it's a Go file.
+	// If there is an error during formatting then simply output unformatted Go.
 	output := buf.Bytes()
 	switch filepath.Ext(outputPath) {
 	case ".go":
 		formatted, err := format.Source(output)
 		if err != nil {
+			m.FileReadWriter.WriteFile(outputPath, output, fi.Mode())
 			return err
 		}
 		output = formatted
