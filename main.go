@@ -14,6 +14,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/Masterminds/sprig"
 	"github.com/dustin/go-humanize/english"
 )
 
@@ -146,8 +147,12 @@ func (m *Main) process(path string) error {
 		return err
 	}
 
+	// Build function map.
+	funcMap := sprig.TxtFuncMap()
+	funcMap["pluralize"] = pluralize
+
 	// Parse file into template.
-	tmpl, err := template.New("main").Funcs(FuncMap).Parse(string(source))
+	tmpl, err := template.New("main").Funcs(funcMap).Parse(string(source))
 	if err != nil {
 		return err
 	}
@@ -188,20 +193,6 @@ func (m *Main) process(path string) error {
 	}
 
 	return nil
-}
-
-var FuncMap = template.FuncMap{
-	"upcase":    strings.ToUpper,
-	"downcase":  strings.ToLower,
-	"camel":     camelCase,
-	"pluralize": pluralize,
-}
-
-func camelCase(s string) string {
-	if s == "" {
-		return s
-	}
-	return strings.ToLower(string(s[0])) + s[1:]
 }
 
 func pluralize(s string) string {
